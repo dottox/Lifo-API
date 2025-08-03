@@ -1,11 +1,5 @@
 # Lifo-API
 
-El frontend se compondrá de:
-- Web app: `PROXIMAMENTE`
-- Discord bot: `PROXIMAMENTE`
-
-------
-
 Este código es una modificación de un conjunto de códigos hechos en PHP:
 - Código base del juego original creado por Luis Quesada Torres.
 - Código modificado por Sora usando el código base.
@@ -16,3 +10,16 @@ El código modificado por Sora se pueden encontrar en: [Código modificado](http
 El Copyright de Lifo, así como sus distribuciones, se mantienen bajo la licencia descrita por el código fuente original.
 
 Copyright (c) 2006-2013, Luis Quesada Torres - https://github.com/lquesada | www.luisquesada.com
+
+------
+
+El frontend se compondrá de:
+- Web app: `proximamente`
+- Discord bot: `proximamente`
+
+------
+
+Variables de entorno necesarias:
+- `ADMIN_PASSWORD`: Contraseña del administrador inicial.
+- `JWT_SECRET`: Clave secreta para la firma de tokens JWT.
+- `DBA_PASSWORD`: Contraseña de la base de datosww.
