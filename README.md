@@ -22,7 +22,7 @@ El frontend se compondrá de:
 Variables de entorno necesarias:
 - `ADMIN_PASSWORD`: Contraseña del administrador inicial.
 - `JWT_SECRET`: Clave secreta para la firma de tokens JWT.
-- `DBA_PASSWORD`: Contraseña de la base de datosww.
+- `DBA_PASSWORD`: Contraseña de la base de datos.
 
 ------
 
