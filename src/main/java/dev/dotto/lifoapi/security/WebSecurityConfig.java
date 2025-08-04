@@ -67,6 +67,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/api/auth/user").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/health").permitAll()
@@ -103,9 +104,9 @@ public class WebSecurityConfig {
 
             // Initialize roles
             Role userRole = roleRepository.findByRoleName(GameRole.USER)
-                    .orElseGet(() -> roleRepository.save(new Role(GameRole.USER)));
+                    .orElseGet(() -> roleRepository.saveAndFlush(new Role(GameRole.USER)));
             Role adminRole = roleRepository.findByRoleName(GameRole.ADMIN)
-                    .orElseGet(() -> roleRepository.save(new Role(GameRole.ADMIN)));
+                    .orElseGet(() -> roleRepository.saveAndFlush(new Role(GameRole.ADMIN)));
 
             // Create the set of roles for the admin user
             Set<Role> adminRoles = Set.of(userRole, adminRole);
@@ -122,11 +123,26 @@ public class WebSecurityConfig {
                 userRepository.save(admin);
             }
 
-            // Set roles for admin user
-            userRepository.findByUsername("admin").ifPresent(adm -> {
-                adm.setRoles(adminRoles);
-                userRepository.save(adm);
-            });
+            // Assign roles to admin user
+            User admin = userRepository.findByUsername("admin")
+                    .orElseThrow(() -> new RuntimeException("Admin user not found"));
+            admin.setRoles(adminRoles);
+            userRepository.save(admin);
+
+
+
+            // FOR TESTING PURPOSES: Create a test user
+
+            Set<Role> testRoles = Set.of(userRole);
+
+            if (!userRepository.existsByUsername("test")) {
+                User testUser = new User("test", passwordEncoder.encode("test123"), "test@lifo.com");
+                userRepository.save(testUser);
+            }
+            User testUser = userRepository.findByUsername("test")
+                    .orElseThrow(() -> new RuntimeException("Test user not found"));
+            testUser.setRoles(testRoles);
+            userRepository.save(testUser);
         };
     }
 }
