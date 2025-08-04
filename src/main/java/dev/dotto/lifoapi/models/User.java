@@ -42,6 +42,8 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
+    private Boolean premium;
+
 
     // --- Account's info ---
 
@@ -80,6 +82,10 @@ public class User {
 
     // --- Work's info ---
 
+    @ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE},fetch = FetchType.EAGER)
+    @JoinColumn(name = "job_id")
+    private Job job;
+
     @NotNull
     @Column(name = "working_since")
     private Date workingSince;
@@ -99,8 +105,10 @@ public class User {
         this.experience = 0L;
         this.gold = 0L;
         this.createdAt = new Date();
+        this.job = null;
         this.workingSince = new Date(0);
         this.workingUntil = new Date(0);
+        this.premium = false;
     }
 
 }
