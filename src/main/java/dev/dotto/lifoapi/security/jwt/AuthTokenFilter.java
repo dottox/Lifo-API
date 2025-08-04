@@ -66,17 +66,21 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
     // Parses the JWT from the request header
     private String parseJwt(HttpServletRequest request) {
+
+        // Check header first because:
+        // - The discord bot will use auth header to make request as the user
+        String jwtFromHeader = jwtUtils.getJwtFromHeader(request);
+        if (jwtFromHeader != null) {
+            logger.debug("JWT from header: {}", jwtFromHeader);
+            return jwtFromHeader;
+        }
+
         String jwtFromCookie = jwtUtils.getJwtFromCookies(request);
         if (jwtFromCookie != null) {
             logger.debug("JWT from cookie: {}", jwtFromCookie);
             return jwtFromCookie;
         }
 
-        String jwtFromHeader = jwtUtils.getJwtFromHeader(request);
-        if (jwtFromHeader != null) {
-            logger.debug("JWT from header: {}", jwtFromHeader);
-            return jwtFromHeader;
-        }
 
         return null;
     }
