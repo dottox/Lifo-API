@@ -167,40 +167,12 @@ public class AuthController {
     }
 
     @Tag(name = "Authentication", description = "APIs for user authentication and registration")
-    @Operation(summary = "Get User Details", description = "API to retrieve details of the logged in user")
-    @GetMapping("/user")
-    public ResponseEntity<UserInfoResponse> getUserDetails() {
-
-        // Deprecated: Get user details from authentication
-//        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-//
-//        List <String> roles = userDetails.getAuthorities().stream()
-//                .map(GrantedAuthority::getAuthority)
-//                .toList();
-
-        // Now: Get user details from authUtil
-        User user = authUtil.loggedInUser();
-
-        List<String> roles = user.getRoles().stream()
-                .map(role -> role.getRoleName().name())
-                .toList();
-
-        UserInfoResponse response = new UserInfoResponse(
-                user.getUserId(),
-                user.getUsername(),
-                roles
-        );
-
-        return ResponseEntity.ok(response);
-    }
-
-    @Tag(name = "Authentication", description = "APIs for user authentication and registration")
     @Operation(summary = "Sign Out", description = "API to sign out the user and clear JWT cookie")
     @PostMapping("/signout")
     public ResponseEntity<MessageResponse> signOut() {
         ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new MessageResponse("You've been signed out!"));
+                .body(new MessageResponse("Has cerrado sesión correctamente!"));
     }
 }
