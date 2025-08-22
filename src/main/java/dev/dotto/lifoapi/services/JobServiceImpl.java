@@ -2,8 +2,10 @@ package dev.dotto.lifoapi.services;
 
 import dev.dotto.lifoapi.exceptions.ApiException;
 import dev.dotto.lifoapi.exceptions.ResourceNotFoundException;
+import dev.dotto.lifoapi.models.Item;
 import dev.dotto.lifoapi.models.Job;
 import dev.dotto.lifoapi.models.User;
+import dev.dotto.lifoapi.payloads.ItemDTO;
 import dev.dotto.lifoapi.payloads.job.JobDTO;
 import dev.dotto.lifoapi.payloads.job.JobResponse;
 import dev.dotto.lifoapi.payloads.job.StartWorkResponse;
@@ -11,6 +13,8 @@ import dev.dotto.lifoapi.payloads.job.StopWorkResponse;
 import dev.dotto.lifoapi.repositories.JobRepository;
 import dev.dotto.lifoapi.repositories.UserRepository;
 import dev.dotto.lifoapi.util.AuthUtil;
+import dev.dotto.lifoapi.util.GameUtil;
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +44,9 @@ public class JobServiceImpl implements JobService {
     @Autowired
     private AuthUtil authUtil;
 
+    @Autowired
+    private GameUtil gameUtil;
+
     @Override
     public JobResponse getAllJobs(Integer pageNumber, Integer pageSize, String sortBy, String sortDirection) {
         if (jobRepository.count() == 0) {
@@ -66,12 +73,12 @@ public class JobServiceImpl implements JobService {
 
         // Create JobResponse object and return it
         return new JobResponse(
-                jobDTOs,
                 jobPage.getNumber(),
                 jobPage.getSize(),
                 jobPage.getTotalElements(),
                 jobPage.getTotalPages(),
-                jobPage.isLast()
+                jobPage.isLast(),
+                jobDTOs
         );
     }
 
@@ -83,6 +90,7 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
+    @Transactional
     public StartWorkResponse startWorking(Long jobId) {
         User user = authUtil.loggedInUser();
         // If user has a job and the workingUntil date is in the past (they finished the job):
@@ -119,6 +127,7 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
+    @Transactional
     public StopWorkResponse stopWorking() {
         User user = authUtil.loggedInUser();
 
@@ -130,55 +139,55 @@ public class JobServiceImpl implements JobService {
         // Get the user's job
         Job job = user.getJob();
 
-        // Calculate experience and gold gained
-        // If user completed the job:
-        // - Total experience and gold is added to user's account
-        // Else, user completed only a part of the job:
-        // - Experience and gold is calculated based on the time worked
+        // Reset user's job.
+        user.setJob(null);
+
+        // Calculate the time worked and the total time for the job
         Date workingSince = user.getWorkingSince();
         Date workingUntil = user.getWorkingUntil();
         Date now = new Date();
+        long workedTime = now.getTime() - workingSince.getTime(); // in milliseconds
+        long totalTime = workingUntil.getTime() - workingSince.getTime(); // in milliseconds
 
-        if (now.after(workingUntil)) { // User completed the job
-            user.setExperience(user.getExperience() + job.getExperience());
-            user.setGold(user.getGold() + job.getGold());
-            user.setJob(null);
-            userRepository.save(user);
-            return new StopWorkResponse(
-                    "Has finalizado tu trabajo!",
-                    job.getJobName(),
-                    job.getWorkingTime(),
-                    job.getExperience(),
-                    job.getGold(),
-                    true
-            );
+        if (totalTime <= 0) { // Check for invalid working time, should not happen
+            throw new ApiException("Tiempo de trabajo inválido", HttpStatus.BAD_REQUEST);
         }
-        else { // User did not complete the job, calculate partial experience and gold
-            long workedTime = now.getTime() - workingSince.getTime();
-            long totalTime = workingUntil.getTime() - workingSince.getTime();
 
-            if (totalTime <= 0) {
-                throw new ApiException("Tiempo de trabajo inválido", HttpStatus.BAD_REQUEST);
-            }
+        // Calculate the percentage of the job completed
+        Float percentageCompleted = (float) workedTime / totalTime;
+        Boolean completedJob = percentageCompleted >= 1.0F;
 
-            Float percentageCompleted = (float) workedTime / totalTime;
-            long experienceGained = (long) (job.getExperience() * percentageCompleted);
-            long goldGained = (long) (job.getGold() * percentageCompleted);
-
-            user.setExperience(user.getExperience() + experienceGained);
-            user.setGold(user.getGold() + goldGained);
-            user.setJob(null);
-            userRepository.save(user);
-            return new StopWorkResponse(
-                    "Has parado de trabajar",
-                    job.getJobName(),
-                    (int) workedTime / 1000, // Convert milliseconds to seconds
-                    experienceGained,
-                    goldGained,
-                    false
-            );
+        // If the job is completed, cap the percentage at 100% and use the total time worked
+        if (completedJob) {
+            percentageCompleted = 1.0F;
+            workedTime = totalTime;
         }
+
+        // Calculate experience and gold gained based on the percentage completed and add them to the player
+        long experienceGained = (long) (job.getExperience() * percentageCompleted);
+        long goldGained = (long) (job.getGold() * percentageCompleted);
+        gameUtil.addGoldToPlayer(user, goldGained);
+        gameUtil.addExperienceToPlayer(user, experienceGained);
+
+        // Calculate and add the items gained from working
+        List<Item> gainedItems = gameUtil.addItemsFromWorking(user, workedTime / 1000);
+
+        // Convert gainedItems to their DTO representation
+        List<ItemDTO> gainedItemsDTO = gainedItems.stream()
+                .map(item -> modelMapper.map(item, ItemDTO.class))
+                .toList();
+
+        Integer levelUps = gameUtil.calculateLevelUps(user);
+
+        return new StopWorkResponse(
+                percentageCompleted == 1.0F ? "Finalizaste de trabajar!" : "Has parado de trabajar",
+                job.getJobName(),
+                (int) workedTime / 1000, // Convert milliseconds to seconds
+                experienceGained,
+                goldGained,
+                levelUps,
+                completedJob,
+                gainedItemsDTO
+                );
     }
-
-
 }
