@@ -58,10 +58,11 @@ public class JwtUtils {
     public ResponseCookie generateJwtCookie(UserDetailsImpl userDetails) {
         String jwt = generateTokenFromUsername(userDetails.getUsername());
         return ResponseCookie.from(jwtCookie, jwt)
-                //.httpOnly(false) // In true: Prevents JavaScript access to the cookie
-                //.secure(false) // In true: Ensures the cookie is sent over HTTPS
+                .httpOnly(true) // In true: Prevents JavaScript access to the cookie
+                .secure(true) // In true: Ensures the cookie is sent over HTTPS
                 .path("/api") // Sets the path for which the cookie is valid
                 .maxAge(24*60*60) // Sets the expiration time in seconds
+                .partitioned(true)
                 .build();
     }
 
