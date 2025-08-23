@@ -15,8 +15,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://localhost:3000", // Local frontend
-                                "https://your-frontend.herokuapp.com" // Add this when deployed
+                                "https://lifo-frontend-a7bd26ef6b35.herokuapp.com/" // Add this when deployed
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowCredentials(true);
